@@ -1,0 +1,17 @@
+{
+  "version": "3.2.41",
+  "url": "INSERT_LINK_TO_YOUR_GAME_ZIP_HERE",
+  "sha256": "",
+  "sizeBytes": null,
+  "releaseDate": "2026-02-13",
+  "notes": "",
+  "minLauncherVersion": "5.3.9",
+  "channels": {
+    "stable": {
+      "version": "3.2.41",
+      "url": "INSERT_LINK_TO_YOUR_GAME_ZIP_HERE",
+      "sha256": "",
+      "sizeBytes": null
+    }
+  }
+}
