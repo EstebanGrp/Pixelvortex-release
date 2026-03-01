@@ -1,0 +1,8 @@
+#version 120
+
+
+#define THE_END
+#define GBUFFER_ARMOR_GLINT
+#define SHADER_BASIC
+
+#include "/common/glint_blocks_fragment.glsl"
