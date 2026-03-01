@@ -1,0 +1,8 @@
+{
+  "name": "Skin Layers 3D",
+  "version": "1.1",
+  "description": "Adds 3D skin layers (hats, jackets, sleeves, pants) to players.",
+  "author": "PixelVortex",
+  "main": "SkinLayers.js",
+  "type": "mod"
+}

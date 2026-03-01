@@ -1,0 +1,8 @@
+{
+  "name": "Eyeless Fresh Moves",
+  "version": "3.0.1",
+  "description": "Añade animaciones frescas y dinámicas al jugador.",
+  "author": "Unknown",
+  "main": "FreshMovesLoader.js",
+  "type": "mod"
+}

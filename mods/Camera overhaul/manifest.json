@@ -1,0 +1,8 @@
+{
+  "name": "Camera Overhaul",
+  "version": "1.0.0",
+  "description": "Mejora el movimiento de la cámara para hacerlo más realista.",
+  "author": "EstebanGrp_",
+  "main": "camera-overhaul-full.js",
+  "type": "mod"
+}

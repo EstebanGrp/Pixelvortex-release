@@ -1,0 +1,8 @@
+{
+  "name": "Chat Memes",
+  "version": "1.0.0",
+  "description": "Añade funcionalidad de memes al chat.",
+  "author": "Unknown",
+  "main": "ChatMemes.js",
+  "type": "mod"
+}

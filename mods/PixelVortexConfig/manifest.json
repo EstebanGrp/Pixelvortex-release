@@ -1,0 +1,8 @@
+{
+  "name": "Pixel Vortex Config",
+  "version": "1.0.0",
+  "description": "Carga la configuración de rangos, bans y mensajes desde un JSON local.",
+  "author": "PixelVortex Team",
+  "main": "PixelVortexConfig.js",
+  "type": "mod"
+}

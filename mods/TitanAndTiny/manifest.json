@@ -1,0 +1,8 @@
+{
+  "name": "Titan & Tiny Mod",
+  "version": "1.0.0",
+  "description": "Allows players to become Titanically huge or microscopically tiny.",
+  "author": "Trae",
+  "main": "TitanAndTiny.js",
+  "type": "mod"
+}

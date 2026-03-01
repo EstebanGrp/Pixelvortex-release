@@ -1,0 +1,8 @@
+{
+  "name": "PV-Core AI",
+  "version": "1.0.0",
+  "description": "Integrates PV-Core AI into the client chat.",
+  "author": "Trae",
+  "main": "PVCoreAI.js",
+  "type": "mod"
+}

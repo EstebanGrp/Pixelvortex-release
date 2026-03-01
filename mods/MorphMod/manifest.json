@@ -1,0 +1,8 @@
+{
+  "name": "Morph Mod",
+  "version": "1.0.0",
+  "description": "Transform into any mob in the game!",
+  "author": "Trae",
+  "main": "MorphMod.js",
+  "type": "mod"
+}

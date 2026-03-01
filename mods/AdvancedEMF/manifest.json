@@ -1,0 +1,8 @@
+{
+  "name": "Advanced EMF Loader",
+  "version": "1.0.0",
+  "description": "Loader experimental para modelos .jem (OptiFine) y texturas dinámicas (ETF).",
+  "author": "Trae Assistant",
+  "main": "Loader.js",
+  "type": "mod"
+}

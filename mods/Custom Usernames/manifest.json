@@ -1,0 +1,14 @@
+{
+  "name": "Custom Usernames",
+  "version": "4.4.3",
+  "description": "Custom Usernames and Visual Enhancements",
+  "author": "Unknown",
+  "main": "loader.js",
+  "type": "mod",
+  "scripts": [
+    "save.js",
+    "CustomUsernames.js",
+    "animations.js",
+    "popup_injector.js"
+  ]
+}

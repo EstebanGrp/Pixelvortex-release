@@ -1,0 +1,8 @@
+{
+  "name": "Item Physics",
+  "version": "2.6.0",
+  "description": "Añade física realista a los objetos caídos.",
+  "author": "Unknown",
+  "main": "ItemPhysics.js",
+  "type": "mod"
+}
