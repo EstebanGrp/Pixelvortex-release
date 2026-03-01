@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <title>PixelVortex Client</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1.0" />
+    <meta
+      name="description"
+      content="Play free online games such as EggWars, Skywars, and more! Build with an unlimited selection of blocks. No login required!" />
+    <meta name="theme-color" content="#6045a0" />
+    <meta name="keywords" content="Blocks, Voxel, Building, Parkour, PVP, Videogame, BlockCraft, Miniblox, Minecraft, PixelVortex" />
+    <meta name="author" content="Victor Wei, qhyun, (Pixelvortex: EstebanGrp_, MysticWolf)" />
+
+    <meta name="theme-color" content="#6045a0" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <meta property="og:title" content="PixelVortex" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pixelvortex.io" />
+    <meta property="og:image" content="/images/titlescreen/default.png" />
+    <meta
+      property="og:description"
+      content="Play free online games such as EggWars, Skywars, and more! Build with an unlimited selection of blocks. No login required!" />
+
+    <link rel="manifest" href="manifest.json" />
+
+    <meta http-equiv="Cache-control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="expires" content="0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+
+    <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <link rel="preconnect" href="https://www.google.com" />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet" crossorigin="anonymous" />
+    <script src="/assets/sodium_renderer.js"></script>
+
+    <script>
+      (function () {
+        function loadScript(src) {
+          return new Promise(function (resolve, reject) {
+            const s = document.createElement("script");
+            s.src = src;
+            s.async = true;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        }
+
+        function shouldLoadCaptcha() {
+          try {
+            const p = new URLSearchParams((window.location && window.location.search) || "");
+            if (p.get("pvCaptcha") === "0") return false;
+            if (localStorage.getItem("PV_DISABLE_CAPTCHA") === "1") return false;
+          } catch (_) {}
+          return true;
+        }
+
+        function schedule() {
+          if (!shouldLoadCaptcha()) return;
+
+          const turnstile = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+          const recaptcha = "https://www.google.com/recaptcha/api.js?render=6Ld0f2UqAAAAAF5kaPg3hGzwAwdJ7y6DbxAlD2t6";
+
+          const start = function () {
+            loadScript(turnstile).catch(function () {});
+            loadScript(recaptcha).catch(function () {});
+          };
+
+          if ("requestIdleCallback" in window) {
+            requestIdleCallback(start, { timeout: 1500 });
+          } else {
+            setTimeout(start, 500);
+          }
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", schedule, { once: true });
+        } else {
+          schedule();
+        }
+      })();
+    </script>
+
+    <script>
+      (function () {
+        function isEnabled() {
+          try {
+            return localStorage.getItem("PV_NET_LOG") === "1";
+          } catch (_) {
+            return false;
+          }
+        }
+
+        const MAX_ENTRIES = 300;
+        const MAX_TEXT_CHARS = 200000;
+        const MAX_BLOB_BYTES = 200000;
+        const netLog = [];
+
+        function push(entry) {
+          if (!isEnabled()) return;
+          entry.ts = Date.now();
+          netLog.push(entry);
+          if (netLog.length > MAX_ENTRIES) netLog.splice(0, netLog.length - MAX_ENTRIES);
+        }
+
+        function toAbsUrl(u) {
+          try {
+            if (u instanceof URL) return u.toString();
+            return new URL(String(u), window.location.href).toString();
+          } catch (_) {
+            return String(u);
+          }
+        }
+
+        function safeText(s) {
+          if (typeof s !== "string") return s;
+          if (s.length <= MAX_TEXT_CHARS) return s;
+          return s.slice(0, MAX_TEXT_CHARS) + `\n[TRUNCATED ${s.length - MAX_TEXT_CHARS} chars]`;
+        }
+
+        window.PV_enableNetLog = function () {
+          try {
+            localStorage.setItem("PV_NET_LOG", "1");
+          } catch (_) {}
+        };
+        window.PV_disableNetLog = function () {
+          try {
+            localStorage.removeItem("PV_NET_LOG");
+          } catch (_) {}
+        };
+        window.PV_getNetLog = function () {
+          return netLog.slice();
+        };
+        window.PV_clearNetLog = function () {
+          netLog.length = 0;
+        };
+
+        (function installFetchHook() {
+          const originalDescriptor = Object.getOwnPropertyDescriptor(window, "fetch");
+          let currentFetch = window.fetch;
+
+          function wrapFetch(fetchImpl) {
+            if (typeof fetchImpl !== "function") return fetchImpl;
+            if (fetchImpl.__pv_wrapped__) return fetchImpl;
+
+            const wrapped = function (input, init) {
+              const start = performance.now();
+
+              let url = "";
+              let method = "";
+              try {
+                if (input instanceof Request) {
+                  url = toAbsUrl(input.url);
+                  method = String(input.method || "GET").toUpperCase();
+                } else {
+                  url = toAbsUrl(input);
+                  method = String((init && init.method) || "GET").toUpperCase();
+                }
+              } catch (_) {
+                url = String(input);
+                method = String((init && init.method) || "GET").toUpperCase();
+              }
+
+              return fetchImpl(input, init)
+                .then((resp) => {
+                  const entry = {
+                    kind: "fetch",
+                    url,
+                    method,
+                    status: resp.status,
+                    ok: resp.ok,
+                    elapsedMs: Math.round(performance.now() - start),
+                    contentType: resp.headers && resp.headers.get ? resp.headers.get("content-type") : "",
+                  };
+
+                  try {
+                    const clone = resp.clone();
+                    const ct = String(entry.contentType || "").toLowerCase();
+                    if (ct.includes("application/json") || ct.startsWith("text/")) {
+                      clone
+                        .text()
+                        .then((t) => {
+                          entry.bodyText = safeText(t);
+                          push(entry);
+                        })
+                        .catch(() => {
+                          push(entry);
+                        });
+                    } else {
+                      push(entry);
+                    }
+                  } catch (_) {
+                    push(entry);
+                  }
+
+                  return resp;
+                })
+                .catch((err) => {
+                  push({
+                    kind: "fetch-error",
+                    url,
+                    method,
+                    elapsedMs: Math.round(performance.now() - start),
+                    error: err && err.message ? String(err.message) : String(err),
+                  });
+                  throw err;
+                });
+            };
+
+            try {
+              Object.defineProperty(wrapped, "__pv_wrapped__", { value: true });
+            } catch (_) {}
+            return wrapped;
+          }
+
+          try {
+            Object.defineProperty(window, "fetch", {
+              configurable: true,
+              enumerable: originalDescriptor ? originalDescriptor.enumerable : true,
+              get() {
+                return currentFetch;
+              },
+              set(v) {
+                currentFetch = wrapFetch(v);
+              },
+            });
+            window.fetch = currentFetch;
+          } catch (_) {
+            try {
+              window.fetch = wrapFetch(window.fetch);
+            } catch (_) {}
+          }
+        })();
+
+        (function installXhrHook() {
+          const originalOpen = XMLHttpRequest.prototype.open;
+          const originalSend = XMLHttpRequest.prototype.send;
+
+          XMLHttpRequest.prototype.open = function (method, url) {
+            try {
+              this.__pv_meta__ = {
+                kind: "xhr",
+                method: String(method || "GET").toUpperCase(),
+                url: toAbsUrl(url),
+                start: performance.now(),
+              };
+            } catch (_) {}
+            return originalOpen.apply(this, arguments);
+          };
+
+          XMLHttpRequest.prototype.send = function () {
+            const xhr = this;
+            if (isEnabled()) {
+              try {
+                const meta = xhr.__pv_meta__ || {
+                  kind: "xhr",
+                  method: "",
+                  url: "",
+                  start: performance.now(),
+                };
+
+                function finalize(kind) {
+                  const entry = {
+                    kind,
+                    url: meta.url,
+                    method: meta.method,
+                    status: xhr.status,
+                    elapsedMs: Math.round(performance.now() - meta.start),
+                    responseType: xhr.responseType,
+                  };
+
+                  try {
+                    const ct = String(xhr.getResponseHeader && xhr.getResponseHeader("content-type")).toLowerCase();
+                    entry.contentType = ct;
+                    if ((ct.includes("application/json") || ct.startsWith("text/")) && typeof xhr.responseText === "string") {
+                      entry.bodyText = safeText(xhr.responseText);
+                    }
+                  } catch (_) {}
+
+                  push(entry);
+                }
+
+                xhr.addEventListener("loadend", function () {
+                  finalize("xhr");
+                });
+                xhr.addEventListener("error", function () {
+                  finalize("xhr-error");
+                });
+                xhr.addEventListener("timeout", function () {
+                  finalize("xhr-timeout");
+                });
+                xhr.addEventListener("abort", function () {
+                  finalize("xhr-abort");
+                });
+              } catch (_) {}
+            }
+            return originalSend.apply(this, arguments);
+          };
+        })();
+
+        (function installWebSocketHook() {
+          const originalDescriptor = Object.getOwnPropertyDescriptor(window, "WebSocket");
+          let currentWebSocket = window.WebSocket;
+
+          function wrapWebSocket(WebSocketCtor) {
+            if (typeof WebSocketCtor !== "function") return WebSocketCtor;
+            if (WebSocketCtor.__pv_wrapped__) return WebSocketCtor;
+
+            const Wrapped = class PVWebSocket extends WebSocketCtor {
+              constructor(url, protocols) {
+                const abs = toAbsUrl(url);
+                super(url, protocols);
+
+                try {
+                  const ws = this;
+                  push({ kind: "ws-open", url: abs });
+
+                  ws.addEventListener("message", function (ev) {
+                    if (!isEnabled()) return;
+                    const data = ev.data;
+                    if (typeof data === "string") {
+                      push({ kind: "ws-message", url: ws.url || abs, dataText: safeText(data) });
+                      return;
+                    }
+                    if (data instanceof ArrayBuffer) {
+                      push({ kind: "ws-message", url: ws.url || abs, arrayBufferBytes: data.byteLength });
+                      return;
+                    }
+                    if (typeof Blob !== "undefined" && data instanceof Blob) {
+                      if (data.size <= MAX_BLOB_BYTES && (String(data.type).includes("json") || String(data.type).startsWith("text/"))) {
+                        const r = new FileReader();
+                        r.onload = function () {
+                          push({ kind: "ws-message", url: ws.url || abs, blobType: data.type, dataText: safeText(String(r.result || "")) });
+                        };
+                        r.onerror = function () {
+                          push({ kind: "ws-message", url: ws.url || abs, blobType: data.type, blobBytes: data.size });
+                        };
+                        r.readAsText(data);
+                        return;
+                      }
+                      push({ kind: "ws-message", url: ws.url || abs, blobType: data.type, blobBytes: data.size });
+                      return;
+                    }
+                    push({ kind: "ws-message", url: ws.url || abs, dataType: Object.prototype.toString.call(data) });
+                  });
+
+                  ws.addEventListener("close", function (ev) {
+                    push({ kind: "ws-close", url: ws.url || abs, code: ev.code, reason: ev.reason, wasClean: ev.wasClean });
+                  });
+
+                  ws.addEventListener("error", function () {
+                    push({ kind: "ws-error", url: ws.url || abs });
+                  });
+                } catch (_) {}
+              }
+            };
+
+            try {
+              Object.defineProperty(Wrapped, "__pv_wrapped__", { value: true });
+            } catch (_) {}
+            return Wrapped;
+          }
+
+          try {
+            Object.defineProperty(window, "WebSocket", {
+              configurable: true,
+              enumerable: originalDescriptor ? originalDescriptor.enumerable : true,
+              get() {
+                return currentWebSocket;
+              },
+              set(v) {
+                currentWebSocket = wrapWebSocket(v);
+              },
+            });
+            window.WebSocket = currentWebSocket;
+          } catch (_) {
+            try {
+              window.WebSocket = wrapWebSocket(window.WebSocket);
+            } catch (_) {}
+          }
+        })();
+      })();
+    </script>
+
+    <script>
+      (function () {
+        try {
+          const params = new URLSearchParams(window.location && window.location.search || "");
+          let mode = params.get("pvLaunchMode");
+          if (mode !== "local" && mode !== "multiplayer") {
+            if (params.get("connect") === "local" || params.get("offline") === "1") mode = "local";
+            else mode = "multiplayer";
+          }
+
+          window.PV_LAUNCH_MODE = mode;
+
+          try {
+            localStorage.setItem("PV_LAUNCH_MODE", mode);
+            if (mode === "multiplayer") {
+              localStorage.removeItem("PV_OFFLINE");
+              localStorage.removeItem("PV_SP_WORLD");
+              localStorage.removeItem("PV_SP_CUSTOM_WORLD_JSON");
+            } else {
+              localStorage.setItem("PV_OFFLINE", "1");
+            }
+          } catch (_) {}
+
+          if (mode === "local") {
+            const s = document.createElement("script");
+            s.src = "/mods/SinglePlayerMod.js";
+            document.head.appendChild(s);
+          }
+        } catch (_) {}
+      })();
+    </script>
+
+    <!-- SOLO CARGA FIJA DEL CLIENTE -->
+    <script type="module" src="/assets/index-CANiDFbI.js?v=pvcore-tools-r10"></script>
+
+    <link rel="stylesheet" crossorigin href="/assets/index--4F_0oIe.css">
+    
+    <style>
+        #react {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+        #react * {
+            pointer-events: auto;
+        }
+
+        /* Custom Cursors */
+        body, html, canvas {
+            cursor: url('/assets/cursor/Cursor.png'), auto !important;
+        }
+        
+        a, button, input[type="button"], input[type="submit"], [role="button"], .pointer, .clickable {
+            cursor: url('/assets/cursor/Link.png'), pointer !important;
+        }
+        
+        a:hover, button:hover, input[type="button"]:hover, input[type="submit"]:hover, [role="button"]:hover {
+            cursor: url('/assets/cursor/Link.png'), pointer !important;
+        }
+        
+        input[type="text"], input[type="email"], input[type="password"], textarea, .text {
+            cursor: url('/assets/cursor/Text.png'), text !important;
+        }
+        
+        .cursor-minimize {
+            cursor: url('/assets/cursor/Minimise.png'), pointer !important;
+        }
+        
+        .cursor-fullscreen {
+            cursor: url('/assets/cursor/Fullscreen.png'), pointer !important;
+        }
+    </style>
+  </head>
+
+  <body>
+    
+    <div id="loading-screen">
+      <div class="background-image" style="image-rendering: pixelated"></div>
+
+      <div id="loading-screen-container">
+        <div id="loading-screen-text">PixelVortex Client</div>
+        <div id="progress-bar">
+          <div id="progress-bar-inner"></div>
+        </div>
+        <div id="progress-text">Initializing game...</div>
+      </div>
+    </div>
+
+    
+    <div id="react" style="position: absolute; width: 100%; height: 100%; z-index: 4"></div>
+    <canvas id="canvas-hud"></canvas>
+    <div id="canvas-holder"></div>
+
+  </body>
+</html>
